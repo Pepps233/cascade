@@ -4,13 +4,11 @@
 
 <h1 align="center">Cascade</h1>
 
-## Cascade
-
 You describe a task from inside Claude Code or Codex. Cascade breaks it into a dependency graph of smaller subtasks, then runs as many of them at once as their dependencies allow, each one handled by its own CLI agent process. You watch it happen live in a browser tab, and your main session reports progress back to you as pieces finish.
 
 Context is assembled per node and all information flows back to your main session.
 
-## Why Cascade
+<h2 align="center">Why Cascade</h2>
 
 Cascade is built on the principles of graph engineering: the idea that agent work should be described as a graph of bounded nodes and typed edges, not forced through a single linear stack.
 
@@ -20,7 +18,7 @@ A graph fixes this by giving each unit of work a boundary. A node has a clear ta
 
 This is what lets Cascade fan a task out across parallel CLI agents instead of one long serial run: the graph decides what's ready, what's blocked, and what context moves where, so the model doing the work always sees a scoped slice of the problem instead of an ever-growing prompt.
 
-## MCP Server
+<h2 align="center">Cascade MCP</h2>
 
 Cascade runs as a local MCP server over stdio. It holds no model access of its own — it validates graphs, schedules work, and shells out to the `claude` and `codex` CLIs already configured on your machine, using whatever models and permissions those CLIs already have.
 
@@ -38,7 +36,7 @@ Copy `commands/cascade.md` to `~/.claude/commands/cascade.md` and `commands/casc
 
 The server starts a local viewer on the first free port from `7317` upward the moment a graph is created, and opens it in your browser automatically.
 
-## Tools
+<h1 align="center">Tools</h1>
 
 | Tool | What it does |
 |---|---|
