@@ -13,6 +13,16 @@ export interface WorkerOutcome {
   error?: string;
 }
 
+// Tracks in-flight child processes by node id so cancelExecution can signal them.
+const liveProcesses = new Map<string, ReturnType<typeof spawn>>();
+
+export function killWorker(nodeId: string): boolean {
+  const child = liveProcesses.get(nodeId);
+  if (!child) return false;
+  child.kill('SIGTERM');
+  return true;
+}
+
 export async function spawnWorker(
   node: CascadeNode,
   prompt: string,
@@ -118,6 +128,7 @@ function runProcess(
 ): Promise<ProcessResult> {
   return new Promise((resolve) => {
     const child = spawn(command, args, { cwd });
+    liveProcesses.set(nodeId, child);
     const logStream = createWriteStream(logPath(cwd, nodeId), { flags: 'a' });
 
     let stdout = '';
@@ -142,12 +153,14 @@ function runProcess(
 
     child.on('close', (code) => {
       clearTimeout(timer);
+      liveProcesses.delete(nodeId);
       logStream.end();
       resolve({ stdout, code, timedOut, stderrTail: stderrTail.trim() });
     });
 
     child.on('error', (err) => {
       clearTimeout(timer);
+      liveProcesses.delete(nodeId);
       logStream.end();
       stderrTail = err.message;
       resolve({ stdout, code: -1, timedOut, stderrTail });
