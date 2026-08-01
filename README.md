@@ -36,7 +36,7 @@ Copy `commands/cascade.md` to `~/.claude/commands/cascade.md` and `commands/casc
 
 The server starts a local viewer on the first free port from `7317` upward the moment a graph is created, and opens it in your browser automatically.
 
-<h1 align="center">Tools</h1>
+<h2 align="center">Tools</h2>
 
 | Tool | What it does |
 |---|---|
