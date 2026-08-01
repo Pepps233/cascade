@@ -12,6 +12,10 @@ import { ensureViewer, viewerUrl, openBrowser } from './viewer.js';
 
 const server = new McpServer({ name: 'cascade', version: '0.1.0' });
 
+// Workers routinely run for many minutes; a short default forces the orchestrator
+// into a hot polling loop that burns calls, context, and permission prompts.
+const DEFAULT_WAIT_TIMEOUT_MS = 600_000;
+
 const nodeInputSchema = z.object({
   id: z.string().min(1),
   task: z.string().min(1),
@@ -122,7 +126,12 @@ server.registerTool(
       'Block until any node in the graph changes state, or until the timeout elapses. Returns changed nodes, a full snapshot, and whether the graph is fully terminal.',
     inputSchema: {
       graph_id: z.string().min(1),
-      timeout_ms: z.number().int().positive().optional(),
+      timeout_ms: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe('Overall wait budget in milliseconds; defaults to 600000 (10 minutes)'),
     },
   },
   async ({ graph_id, timeout_ms }) => {
@@ -131,7 +140,7 @@ server.registerTool(
       return { isError: true, content: [{ type: 'text', text: `Unknown graph_id: ${graph_id}` }] };
     }
 
-    const timeout = timeout_ms ?? 60_000;
+    const timeout = timeout_ms ?? DEFAULT_WAIT_TIMEOUT_MS;
 
     const event = await waitForNextChange(graph_id, timeout);
 
