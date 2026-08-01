@@ -12,6 +12,10 @@ import { ensureViewer, viewerUrl, openBrowser } from './viewer.js';
 
 const server = new McpServer({ name: 'cascade', version: '0.1.0' });
 
+// Workers routinely run for many minutes; a short default forces the orchestrator
+// into a hot polling loop that burns calls, context, and permission prompts.
+const DEFAULT_WAIT_TIMEOUT_MS = 600_000;
+
 const nodeInputSchema = z.object({
   id: z.string().min(1),
   task: z.string().min(1),
@@ -119,10 +123,15 @@ server.registerTool(
   'wait_for_change',
   {
     description:
-      'Block until any node in the graph changes state, or until the timeout elapses. Returns changed nodes, a full snapshot, and whether the graph is fully terminal.',
+      'Block until any node in the graph changes state, or until the timeout elapses. On a change, returns the changed nodes, a full snapshot, and whether the graph is fully terminal. On a timeout, the snapshot is omitted since nothing moved.',
     inputSchema: {
       graph_id: z.string().min(1),
-      timeout_ms: z.number().int().positive().optional(),
+      timeout_ms: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe('Overall wait budget in milliseconds; defaults to 600000 (10 minutes)'),
     },
   },
   async ({ graph_id, timeout_ms }) => {
@@ -131,7 +140,7 @@ server.registerTool(
       return { isError: true, content: [{ type: 'text', text: `Unknown graph_id: ${graph_id}` }] };
     }
 
-    const timeout = timeout_ms ?? 60_000;
+    const timeout = timeout_ms ?? DEFAULT_WAIT_TIMEOUT_MS;
 
     const event = await waitForNextChange(graph_id, timeout);
 
@@ -151,29 +160,63 @@ server.registerTool(
         graph_id: graph.id,
         changed_nodes: changedNodes,
         all_terminal: allTerminalFlag,
-        snapshot: graph.nodes.map(nodeSummary),
+        // A timeout means nothing moved, so the snapshot would repeat what the
+        // caller already has. Omit it to keep idle polls cheap.
+        ...(event ? { snapshot: graph.nodes.map(nodeSummary) } : {}),
       },
     };
   },
 );
 
+// One worker finishing emits a burst (the node itself, plus every node it unblocks),
+// and near-simultaneous completions emit separately. Collecting for a beat after the
+// first event lets the orchestrator see one merged result instead of several.
+const COALESCE_WINDOW_MS = 250;
+
 function waitForNextChange(graphId: string, timeoutMs: number): Promise<ChangeEvent | null> {
   return new Promise((resolve) => {
+    const deadline = Date.now() + timeoutMs;
+    const collected: ChangeEvent[] = [];
+    let coalesceTimer: NodeJS.Timeout | undefined;
+
     const onChange = (event: ChangeEvent) => {
       if (event.graphId !== graphId) return;
-      cleanup();
-      resolve(event);
+      collected.push(event);
+      if (coalesceTimer) return;
+      // Never let the debounce push past the caller's overall budget.
+      const window = Math.max(0, Math.min(COALESCE_WINDOW_MS, deadline - Date.now()));
+      coalesceTimer = setTimeout(finish, window);
     };
-    const timer = setTimeout(() => {
+
+    const finish = () => {
       cleanup();
-      resolve(null);
-    }, timeoutMs);
+      resolve(collected.length > 0 ? mergeChangeEvents(graphId, collected) : null);
+    };
+
+    const timeoutTimer = setTimeout(finish, timeoutMs);
+
     const cleanup = () => {
-      clearTimeout(timer);
+      clearTimeout(timeoutTimer);
+      if (coalesceTimer) clearTimeout(coalesceTimer);
       graphEvents.off('change', onChange);
     };
+
     graphEvents.on('change', onChange);
   });
+}
+
+// De-duplicate by node id keeping the latest state seen for each node, and take
+// all_terminal from the final event since earlier ones are already stale.
+function mergeChangeEvents(graphId: string, events: ChangeEvent[]): ChangeEvent {
+  const latestById = new Map<string, CascadeNode>();
+  for (const event of events) {
+    for (const node of event.changedNodes) latestById.set(node.id, node);
+  }
+  return {
+    graphId,
+    changedNodes: [...latestById.values()],
+    allTerminal: events[events.length - 1]!.allTerminal,
+  };
 }
 
 server.registerTool(
