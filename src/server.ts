@@ -123,7 +123,7 @@ server.registerTool(
   'wait_for_change',
   {
     description:
-      'Block until any node in the graph changes state, or until the timeout elapses. Returns changed nodes, a full snapshot, and whether the graph is fully terminal.',
+      'Block until any node in the graph changes state, or until the timeout elapses. On a change, returns the changed nodes, a full snapshot, and whether the graph is fully terminal. On a timeout, the snapshot is omitted since nothing moved.',
     inputSchema: {
       graph_id: z.string().min(1),
       timeout_ms: z
@@ -160,7 +160,9 @@ server.registerTool(
         graph_id: graph.id,
         changed_nodes: changedNodes,
         all_terminal: allTerminalFlag,
-        snapshot: graph.nodes.map(nodeSummary),
+        // A timeout means nothing moved, so the snapshot would repeat what the
+        // caller already has. Omit it to keep idle polls cheap.
+        ...(event ? { snapshot: graph.nodes.map(nodeSummary) } : {}),
       },
     };
   },
