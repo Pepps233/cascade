@@ -168,23 +168,55 @@ server.registerTool(
   },
 );
 
+// One worker finishing emits a burst (the node itself, plus every node it unblocks),
+// and near-simultaneous completions emit separately. Collecting for a beat after the
+// first event lets the orchestrator see one merged result instead of several.
+const COALESCE_WINDOW_MS = 250;
+
 function waitForNextChange(graphId: string, timeoutMs: number): Promise<ChangeEvent | null> {
   return new Promise((resolve) => {
+    const deadline = Date.now() + timeoutMs;
+    const collected: ChangeEvent[] = [];
+    let coalesceTimer: NodeJS.Timeout | undefined;
+
     const onChange = (event: ChangeEvent) => {
       if (event.graphId !== graphId) return;
-      cleanup();
-      resolve(event);
+      collected.push(event);
+      if (coalesceTimer) return;
+      // Never let the debounce push past the caller's overall budget.
+      const window = Math.max(0, Math.min(COALESCE_WINDOW_MS, deadline - Date.now()));
+      coalesceTimer = setTimeout(finish, window);
     };
-    const timer = setTimeout(() => {
+
+    const finish = () => {
       cleanup();
-      resolve(null);
-    }, timeoutMs);
+      resolve(collected.length > 0 ? mergeChangeEvents(graphId, collected) : null);
+    };
+
+    const timeoutTimer = setTimeout(finish, timeoutMs);
+
     const cleanup = () => {
-      clearTimeout(timer);
+      clearTimeout(timeoutTimer);
+      if (coalesceTimer) clearTimeout(coalesceTimer);
       graphEvents.off('change', onChange);
     };
+
     graphEvents.on('change', onChange);
   });
+}
+
+// De-duplicate by node id keeping the latest state seen for each node, and take
+// all_terminal from the final event since earlier ones are already stale.
+function mergeChangeEvents(graphId: string, events: ChangeEvent[]): ChangeEvent {
+  const latestById = new Map<string, CascadeNode>();
+  for (const event of events) {
+    for (const node of event.changedNodes) latestById.set(node.id, node);
+  }
+  return {
+    graphId,
+    changedNodes: [...latestById.values()],
+    allTerminal: events[events.length - 1]!.allTerminal,
+  };
 }
 
 server.registerTool(
