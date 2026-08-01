@@ -8,6 +8,8 @@ You describe a task from inside Claude Code or Codex. Cascade breaks it into a d
 
 Context is assembled per node and all information flows back to your main session.
 
+<img width="842" height="523" alt="Screenshot 2026-08-01 at 4 54 50 PM" src="https://github.com/user-attachments/assets/d3cfe61b-fa62-40da-a9d9-39449bd25bba" />
+
 <h2 align="center">Why Cascade</h2>
 
 Cascade is built on the principles of graph engineering: the idea that agent work should be described as a graph of bounded nodes and typed edges, not forced through a single linear stack.
