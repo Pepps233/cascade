@@ -16,7 +16,7 @@ This skill drives the `cascade` MCP server. Its tools appear as `mcp__cascade__c
 If those tools are not available, **stop and tell the user the server isn't connected** — do not fall back to doing the work yourself, and do not simulate graph execution. The fix is:
 
 ```
-claude mcp add --scope user cascade -- npx -y cascade-mcp
+claude mcp add --scope user cascade -- npx -y @pepps233/cascade
 ```
 
 Verify with `claude mcp list`. Two common failures: registering without `--scope user` (the server then only resolves inside one project directory), and registering a literal placeholder path instead of a real one. Both show up as the tools being missing or `✘ Failed to connect`.

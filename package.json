@@ -1,5 +1,5 @@
 {
-  "name": "cascade-mcp",
+  "name": "@pepps233/cascade",
   "version": "0.1.0",
   "description": "Decompose a task into a DAG of subtasks executed by parallel CLI agents",
   "type": "module",
@@ -21,6 +21,9 @@
     "dag",
     "orchestration"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "cascade": "dist/server.js"
   },

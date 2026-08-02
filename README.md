@@ -27,8 +27,8 @@ Cascade runs as a local MCP server over stdio. It holds no model access of its o
 Register it once with either host. No clone or build required — `npx` fetches the published package on first run:
 
 ```bash
-claude mcp add --scope user cascade -- npx -y cascade-mcp
-codex mcp add cascade -- npx -y cascade-mcp
+claude mcp add --scope user cascade -- npx -y @pepps233/cascade
+codex mcp add cascade -- npx -y @pepps233/cascade
 ```
 
 `--scope user` matters: without it the server is registered against a single project directory and `/cascade` will silently have no tools anywhere else. Verify with `claude mcp list` — cascade should report `✔ Connected`.
