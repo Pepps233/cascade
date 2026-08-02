@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/cascade.png" alt="Cascade" width="480">
+  <img src="https://raw.githubusercontent.com/Pepps233/cascade/main/assets/cascade.png" alt="Cascade" width="480">
 </p>
 
 <h1 align="center">Cascade</h1>
