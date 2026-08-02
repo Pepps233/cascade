@@ -1,14 +1,42 @@
 {
-  "name": "cascade",
+  "name": "@pepps233/cascade",
   "version": "0.1.0",
   "description": "Decompose a task into a DAG of subtasks executed by parallel CLI agents",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pepps233/cascade.git"
+  },
+  "homepage": "https://github.com/Pepps233/cascade#readme",
+  "bugs": {
+    "url": "https://github.com/Pepps233/cascade/issues"
+  },
+  "keywords": [
+    "mcp",
+    "claude",
+    "claude-code",
+    "codex",
+    "agents",
+    "dag",
+    "orchestration"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "cascade": "dist/server.js"
   },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "tsc -p tsconfig.json --watch"
+    "dev": "tsc -p tsconfig.json --watch",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

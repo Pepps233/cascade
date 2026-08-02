@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/cascade.png" alt="Cascade" width="480">
+  <img src="https://raw.githubusercontent.com/Pepps233/cascade/main/assets/cascade.png" alt="Cascade" width="480">
 </p>
 
 <h1 align="center">Cascade</h1>
@@ -24,17 +24,33 @@ This is what lets Cascade fan a task out across parallel CLI agents instead of o
 
 Cascade runs as a local MCP server over stdio. It holds no model access of its own — it validates graphs, schedules work, and shells out to the `claude` and `codex` CLIs already configured on your machine, using whatever models and permissions those CLIs already have.
 
-Install it once, then point either host at the built server:
+Register it once with either host. No clone or build required — `npx` fetches the published package on first run:
 
 ```bash
-npm install
-npm run build
-
-claude mcp add cascade -- node /absolute/path/to/cascade/dist/server.js
-codex mcp add cascade -- node /absolute/path/to/cascade/dist/server.js
+claude mcp add --scope user cascade -- npx -y @pepps233/cascade
+codex mcp add cascade -- npx -y @pepps233/cascade
 ```
 
-Copy `commands/cascade.md` to `~/.claude/commands/cascade.md` and `commands/cascade-codex.md` to `~/.codex/prompts/cascade.md` to get the `/cascade` entry point in either host. Both templates drive the same MCP tools, so behavior is identical regardless of which CLI you're driving the graph from.
+`--scope user` matters: without it the server is registered against a single project directory and `/cascade` will silently have no tools anywhere else. Verify with `claude mcp list` — cascade should report `✔ Connected`.
+
+To get the `/cascade` entry point, copy the skill into place:
+
+```bash
+mkdir -p ~/.claude/skills/cascade
+curl -fsSL https://raw.githubusercontent.com/Pepps233/cascade/main/skills/cascade/SKILL.md \
+  -o ~/.claude/skills/cascade/SKILL.md
+```
+
+The skill pre-approves the cascade tools for the turn it runs in, so the orchestration loop does not prompt for each call. For Codex, copy `commands/cascade-codex.md` to `~/.codex/prompts/cascade.md` instead. Both templates drive the same MCP tools, so behavior is identical regardless of which CLI you're driving the graph from.
+
+### From source
+
+```bash
+git clone https://github.com/Pepps233/cascade.git && cd cascade
+npm install && npm run build
+
+claude mcp add --scope user cascade -- node "$(pwd)/dist/server.js"
+```
 
 The server starts a local viewer on the first free port from `7317` upward the moment a graph is created, and opens it in your browser automatically.
 
